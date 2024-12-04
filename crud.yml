@@ -1,0 +1,16 @@
+mode: crud
+read:
+- 'arn:aws:ssm:us-east-1:123456789012:parameter/myparameter'
+write:
+- 'arn:aws:ssm:us-east-1:123456789012:parameter/myparameter*'
+list:
+- 'arn:aws:ssm:us-east-1:123456789012:parameter/*'
+wildcard-only:
+  service-read:
+  - 'ec2'
+  service-list:
+  - 'ec2'
+  service-tagging:
+  - 'ec2'
+  service-permissions-management:
+  - 'ec2'
