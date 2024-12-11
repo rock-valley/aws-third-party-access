@@ -3,8 +3,7 @@ import os
 import argparse
 from dotenv import load_dotenv
 
-from jinja2 import StrictUndefined
-from jinja2 import Environment
+from jinja2 import StrictUndefined, Environment
 import boto3
 
 load_dotenv()
@@ -26,6 +25,16 @@ role_names = {
     ),
     "api_access": os.getenv("API_ACCESS_ROLE_NAME", "CrossAccountApiAccessRole"),
 }
+
+subfolder_names = {
+    name
+    for name in os.listdir(TEMPLATE_DIR)
+    if os.path.isdir(os.path.join(TEMPLATE_DIR, name))
+}
+if subfolder_names != set(role_names):
+    raise FileNotFoundError(
+        f"Subfolder mismatch in '{TEMPLATE_DIR}'. Expected: {set(role_names)}, Found: {subfolder_names}"
+    )
 
 
 def load_templates(role_type):
@@ -342,6 +351,7 @@ def create_role_action(role_type, args, preloaded_roles):
         {"trust_policy.json": templates["trust_policy.json"]}
     )["trust_policy.json"]
     create_role(role_type, trust_policy)
+    attach_policies_action(role_type, args)
 
 
 def get_resource_name_from_filename(file_name):
@@ -409,7 +419,6 @@ def create_all(role_type, args):
     create_policies_action(role_type, args, preloaded_policies)
     preloaded_roles = get_roles()
     create_role_action(role_type, args, preloaded_roles)
-    attach_policies_action(role_type, args)
 
 
 def delete_all(role_type, args):
@@ -429,7 +438,7 @@ def main():
         "--role-type",
         choices=role_types,
         required=False,
-        help="Role type for policies and role. (either console_access or api_access). If undefined, CLI runs all",
+        help="Role type for policies and role. If undefined, CLI runs all",
     )
     parser.add_argument(
         "--action",
