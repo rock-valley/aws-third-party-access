@@ -50,16 +50,78 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure `.env`
+### 3. Setup
+####  Configure `.env`
 Copy the example `.env` file:
 ```bash
 cp .env.example .env
 ```
 Update the `.env` file with your target account and cross-account details (see [Environment Variables](#environment-variables) for descriptions).
 
+#### Configure roles file and app/templates directory
+
+1. **Add a `roles.json` File**:
+   - Create a `roles.json` file in the `app` directory.
+   - The structure should be as follows:
+     ```json
+     {
+       "my_role_type": "my_role_name"
+     }
+     ```
+   - The `role_type` can be any unique identifier; it just needs to be unique within this repository.
+
+2. **Add Subfolders**:
+   - For each role type defined in `roles.json`, create a subfolder in both:
+     - `templates/pre/<ROLE_TYPE>`
+     - `templates/post/<ROLE_TYPE>`
+
+3. **Add a Trust Policy**:
+   - Inside each `templates/post/<ROLE_TYPE>` folder, add a `trust_policy.json` file.
+   - Refer to the `./examples` directory for example trust policy files.
+
 ### 4. Define Policy Templates
-- Add your policy templates in `./templates/<role_type>/` as `.json` files.
-- Include a `trust_policy.json` file for each additional role.
+
+###$ Directory Structure
+The `templates` directory has two main subfolders:
+
+- **`pre`**: Contains YAML files that will be preprocessed by [policy_sentry](https://github.com/salesforce/policy_sentry). These YAML files define CRUD templates for IAM policies.
+- **`post`**: Contains JSON files generated from the YAML CRUD templates in the `pre` folder. You can also add JSON files directly to the correct role folder in the `post` folder for additional customization (e.g., condition blocks, which policy_sentry doesn't handle).
+
+Within both `pre` and `post` subfolders:
+- There should be a subfolder for each role you are creating.
+- Every role folder in the `templates/post` folder must include a `trust_policy.json` file to define the role's trust policy.
+
+**Note:** Use cli to setup the role by running: `python app/cli.py --action init-role --role-type <ROLE_TYPE> --role-name <ROLE_NAME>`
+
+#### Workflow
+1. **Create a CRUD Template**:
+   Use the following command to create a `policy_sentry` CRUD template:
+   ```bash
+   python app/cli.py --action create-pre-template --role-type <ROLE_TYPE> --template-name <TEMPLATE_NAME>
+   ```
+   This will create a YAML template in the `templates/<ROLE_TYPE>/pre` folder.
+
+2. **Define Resource ARNs**:
+   Add the ARNs of resources in the CRUD template YAML file.
+
+3. **Repeat or Add Custom JSON Templates**:
+   - Repeat the process for additional CRUD templates as needed.
+   - Alternatively, add JSON templates directly to the `templates/<ROLE_TYPE>/post` folder for customizations.
+
+4. **Generate Policy Statements**:
+   Run the following command to generate policy statements:
+   ```bash
+   python app/cli.py --action create-statements
+   ```
+   The generated policies will be in the `./output` directory.
+
+5. **Review Policies**:
+   Check the generated policies for accuracy before creating the roles and policies in AWS.
+
+#### Notes
+- Use the `pre` folder for YAML templates processed by `policy_sentry`.
+- Use the `post` folder for JSON policies and additional customizations (e.g., condition blocks).
+- Ensure every role folder in `templates/post` includes a `trust_policy.json`.
 
 ---
 
@@ -116,8 +178,6 @@ These variables configure your AWS account and IAM role settings:
 | `AWS_PROFILE`                  | AWS CLI profile to use for target account operations.                                        |
 | `role_path`                    | Path prefix for roles (e.g., `/vendor/`). Optional but recommended for accounts with many roles. |
 | `vendor_trust_principal_arn`   | ARN of the cross-account IAM entity that will assume the roles (provided by vendor).         |
-| `vendor_tag_key`               | Tag key to enforce on roles and policies.                                                    |
-| `vendor_tag_value`             | Tag value to enforce on roles and policies.                                                  |
 | `project_prefix`               | Project namespace in resource names. Used to enforce on roles and policies.                  |
 | `tf_backend_s3_bucket`         | Limit roles to specific S3 bucket (for TF backend)                                          |
 | `tf_backend_dynamodb_table_name`| Limit roles to specific dynamo table (for TF backend)                                       |
@@ -170,9 +230,7 @@ Then the cross account team can simple call `aws --profile target_account` or us
 
 ### 2. Secrets Manager and Parameter Store
 - Limit access by prefix:
-  - `ssm_prefix`
-  - `secret_prefix`
-
+- `project_prefix`
 ---
 
 ### Resources
@@ -183,4 +241,4 @@ To better understand cross-account IAM roles, third-party access, and AWS securi
 3. [Using Roles with Third-Party Identity Providers - AWS IAM Documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html)
 4. [Securely Accessing Customer AWS Accounts with Cross-Account IAM Roles - AWS APN Blog](https://aws.amazon.com/blogs/apn/securely-accessing-customer-aws-accounts-with-cross-account-iam-roles/)
 5. [Configuring your CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html )
-
+6. [Policy Sentry](https://github.com/salesforce/policy_sentry)

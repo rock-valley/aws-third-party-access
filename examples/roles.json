@@ -1,0 +1,5 @@
+{
+  "console_access": "CrossAccountConsoleAccessRole",
+  "api_access": "CrossAccountApiAccessRole"
+}
+

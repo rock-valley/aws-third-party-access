@@ -1,48 +1,108 @@
 import json
 import os
 import argparse
+import shutil
 from dotenv import load_dotenv
-
+from resource_permissions import create_ps_template, create_policy_from_ps_template
 from jinja2 import StrictUndefined, Environment
 import boto3
 
 load_dotenv()
-
-TEMPLATE_DIR = "./templates"
-OUTPUT_DIR = "./output"
-
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(current_dir)
 iam_client = boto3.client("iam")
+
+
+TEMPLATE_DIR = f"{current_dir}/templates"
+OUTPUT_DIR = f"{root_dir}/output"
+role_names = {}
 TAGS = [{"Key": os.getenv("vendor_tag_key"), "Value": os.getenv("vendor_tag_value")}]
 role_path = os.getenv("role_path", "/")
+
+roles_file_path = f"{current_dir}/roles.json"
+if not os.path.exists(roles_file_path):
+    with open(roles_file_path, "w") as file:
+        json.dump({}, file)
+    print(f"Created empty roles.json file at {roles_file_path}")
+
+with open(roles_file_path, "r") as roles_file:
+    role_names = json.load(roles_file)
+
+
 if not role_path.startswith("/"):
     role_path = "/" + role_path
 if not role_path.endswith("/"):
     role_path = role_path + "/"
 
-role_names = {
-    "console_access": os.getenv(
-        "CONSOLE_ACCESS_ROLE_NAME", "CrossAccountConsoleAccessRole"
-    ),
-    "api_access": os.getenv("API_ACCESS_ROLE_NAME", "CrossAccountApiAccessRole"),
-}
+for d in ["pre", "post"]:
+    folder = os.path.join(TEMPLATE_DIR, d)
+    subfolder_names = {
+        name for name in os.listdir(folder) if os.path.isdir(os.path.join(folder, name))
+    }
+    for role_name in role_names:
+        role_folder = os.path.join(folder, role_name)
+        if role_name not in subfolder_names:
+            os.makedirs(role_folder, exist_ok=True)
+            print(f"Created missing folder: {role_folder}")
 
-subfolder_names = {
-    name
-    for name in os.listdir(TEMPLATE_DIR)
-    if os.path.isdir(os.path.join(TEMPLATE_DIR, name))
-}
-if subfolder_names != set(role_names):
-    raise FileNotFoundError(
-        f"Subfolder mismatch in '{TEMPLATE_DIR}'. Expected: {set(role_names)}, Found: {subfolder_names}"
-    )
+    subfolder_names = {
+        name for name in os.listdir(folder) if os.path.isdir(os.path.join(folder, name))
+    }
+    if subfolder_names != set(role_names):
+        raise FileNotFoundError(
+            f"Subfolder mismatch in '{folder}'. Expected: {set(role_names)}, Found: {subfolder_names}"
+        )
+
+
+def initialize_role(role_type, args):
+    pre_folder = os.path.join(TEMPLATE_DIR, "pre", role_type)
+    post_folder = os.path.join(TEMPLATE_DIR, "post", role_type)
+    trust_policy_path = os.path.join(post_folder, "trust_policy.json")
+    with open(roles_file_path, "r") as file:
+        roles = json.load(file)
+    if role_type in roles:
+        raise ValueError(f"Role type '{role_type}' already exists in roles.json.")
+    roles[role_type] = args.role_name
+
+    with open(roles_file_path, "w") as file:
+        json.dump(roles, file, indent=4)
+    print(f"Added role '{role_type}' with name '{args.role_name}' to roles.json.")
+
+    os.makedirs(pre_folder, exist_ok=True)
+    os.makedirs(post_folder, exist_ok=True)
+    print(f"Created subfolders for role '{role_type}' in 'pre' and 'post'.")
+
+    if not os.path.exists(trust_policy_path):
+        with open(trust_policy_path, "w") as file:
+            json.dump({}, file)  # Empty JSON object
+        print(f"Created empty trust_policy.json file at {trust_policy_path}.")
+
+
+def create_policy_sentry_template(role_type, args):
+    if not args.template_name:
+        raise AttributeError("template_name arg is required")
+    if not role_type:
+        raise AttributeError("role_type arg is required")
+    directory = os.path.join(TEMPLATE_DIR, "pre", role_type)
+    create_ps_template(directory, args.template_name)
+
+
+def process_pre_templates(role_type, args):
+    pre_template_dir = os.path.join(TEMPLATE_DIR, "pre", role_type)
+    post_template_dir = os.path.join(TEMPLATE_DIR, "post", role_type)
+    for file_name in os.listdir(pre_template_dir):
+        if file_name.endswith(".yaml") or file_name.endswith("yml"):
+            create_policy_from_ps_template(
+                pre_template_dir, post_template_dir, file_name
+            )
 
 
 def load_templates(role_type):
     """Load all templates (trust and resource policies) for a given role."""
-    role_template_dir = os.path.join(TEMPLATE_DIR, role_type)
+    role_template_dir = os.path.join(TEMPLATE_DIR, "post", role_type)
     if not os.path.exists(role_template_dir):
         raise FileNotFoundError(
-            f"Templates for role '{role_type}' not found in {TEMPLATE_DIR}."
+            f"Templates for role '{role_type}' not found in {TEMPLATE_DIR}/post."
         )
 
     templates = {}
@@ -99,7 +159,7 @@ def save_policy(role_type, policy_name, policy_data):
     """Save the policy to the output directory for a specific role."""
     role_output_dir = os.path.join(OUTPUT_DIR, role_type)
     os.makedirs(role_output_dir, exist_ok=True)
-    output_path = os.path.join(role_output_dir, policy_name)
+    output_path = os.path.join(role_output_dir, f"{role_type}-{policy_name}")
     with open(output_path, "w") as file:
         json.dump(policy_data, file, indent=4)
     print(f"Policy saved to {output_path}")
@@ -269,6 +329,7 @@ def delete_role(role_name):
 
 
 def create_statements_action(role_type, args):
+    process_pre_templates(role_type, args)
     templates = load_templates(role_type)
     processed_policies = process_templates(templates)
     for policy_name, policy_data in processed_policies.items():
@@ -377,7 +438,7 @@ def attach_policies_action(role_type, args):
         print(f"Failed to fetch attached policies for role {role_name}: {e}")
         return
 
-    role_template_dir = os.path.join(TEMPLATE_DIR, role_type)
+    role_template_dir = os.path.join(TEMPLATE_DIR, "post", role_type)
     if not os.path.exists(role_template_dir):
         print(f"No policy templates found for role type {role_type}.")
         return
@@ -444,9 +505,12 @@ def main():
         "--action",
         choices=[
             "create",
+            "create-ps-template",
+            "process-ps-template",
             "create-statements",
             "create-policies",
             "create-role",
+            "init-role",
             "attach-policies",
             "get-policies",
             "delete-policies",
@@ -456,6 +520,11 @@ def main():
         ],
         required=True,
         help="Action to perform.",
+    )
+    parser.add_argument(
+        "--template-name",
+        required=False,
+        help="Name of template to create",
     )
 
     args = parser.parse_args()
@@ -467,6 +536,9 @@ def main():
         else None
     )
     role_type_actions = {
+        "create-ps-template": create_policy_sentry_template,
+        "process-ps-template": process_pre_templates,
+        "init-role": initialize_role,
         "create-statements": create_statements_action,
         "create-policies": lambda role_type, args: create_policies_action(
             role_type, args, preloaded_policies
