@@ -497,7 +497,6 @@ def main():
     )
     parser.add_argument(
         "--role-type",
-        choices=role_types,
         required=False,
         help="Role type for policies and role. If undefined, CLI runs all",
     )
@@ -505,8 +504,8 @@ def main():
         "--action",
         choices=[
             "create",
-            "create-ps-template",
-            "process-ps-template",
+            "create-pre-template",
+            "process-pre-template",
             "create-statements",
             "create-policies",
             "create-role",
@@ -526,8 +525,21 @@ def main():
         required=False,
         help="Name of template to create",
     )
+    parser.add_argument(
+        "--role-name",
+        required=False,
+        help="Name of role to create. Used in init-role",
+    )
 
     args = parser.parse_args()
+    if (
+        args.action != "init-role"
+        and args.role_type
+        and args.role_type not in role_types
+    ):
+        parser.error(
+            f"Invalid role type '{args.role_type}'. Expected one of {list(role_types)}"
+        )
     current_role_types = [args.role_type] if args.role_type else role_types
     preloaded_roles = get_roles() if args.action == "create-role" else None
     preloaded_policies = (
@@ -536,8 +548,8 @@ def main():
         else None
     )
     role_type_actions = {
-        "create-ps-template": create_policy_sentry_template,
-        "process-ps-template": process_pre_templates,
+        "create-pre-template": create_policy_sentry_template,
+        "process-pre-template": process_pre_templates,
         "init-role": initialize_role,
         "create-statements": create_statements_action,
         "create-policies": lambda role_type, args: create_policies_action(

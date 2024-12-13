@@ -23,7 +23,7 @@ This wouldn't be required if the console supported `external-id`.
 
 ### How can I add more role types?
 - create a role type (**e.g.,** `logger`); the value doesn't matter as long as it's unique in this repo.
-- add to the `role_names` dictionary at the top of `cli.py`
+- add to the `role_names` dictionary at the top of `app/cli.py`
 - create a subfolder in `./templates` named after the role type
 
 ---
@@ -93,7 +93,7 @@ Within both `pre` and `post` subfolders:
 
 **Note:** Use cli to setup the role by running: `python app/cli.py --action init-role --role-type <ROLE_TYPE> --role-name <ROLE_NAME>`
 
-#### Workflow
+#### Workflow for Policy Statements
 1. **Create a CRUD Template**:
    Use the following command to create a `policy_sentry` CRUD template:
    ```bash
@@ -127,45 +127,36 @@ Within both `pre` and `post` subfolders:
 
 ## Usage
 
-### Create Roles and Policies
-1. **Validate Policies**:
-   ```bash
-   python ./cli.py --action create-statements
-   ```
-   This creates the policy statements in `./output` folder. Check the output for correctness before creating resources.
+The CLI tool provides several actions to manage IAM roles and policies. Below is a table of available actions, their descriptions, and example usage:
 
-2. **Create All Resources**:
-   ```bash
-   python ./cli.py --action create
-   ```
-   This creates roles, attaches policies, and configures AWS resources.
+| **Action**            | **Description**                                                                                      | **Example**                                                                                           |
+|------------------------|------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| `init-role`           | Initializes a new role by adding it to `app/roles.json`, creating required subfolders, and a trust policy file. **Requires `--role-type` and `--role-name`.** | `python app/cli.py --action init-role --role-name MyNewRole --role-type my_new_role_type`                |
+| `create-pre-template` | Creates a `policy_sentry` CRUD template in the `templates/pre/<ROLE_TYPE>` directory. Requires `--template-name`. | `python app/cli.py --action create-pre-template --role-type my_role_type --template-name my_template`    |
+| `process-pre-template`| Processes YAML templates from `templates/pre/<ROLE_TYPE>` to generate JSON files in `templates/post/<ROLE_TYPE>`. | `python app/cli.py --action process-pre-template --role-type my_role_type`                               |
+| `create-statements`   | Combines templates and processes them into JSON statements in the `output` directory.                 | `python app/cli.py --action create-statements`                                                           |
+| `create-policies`     | Creates IAM policies in AWS for the specified role type using generated templates.                   | `python app/cli.py --action create-policies`                                                             |
+| `create-role`         | Creates an IAM role in AWS for the specified role type, attaching trust policies and other policies. | `python app/cli.py --action create-role`                                                                 |
+| `attach-policies`     | Attaches existing policies to an IAM role in AWS.                                                   | `python app/cli.py --action attach-policies`                                                             |
+| `get-policies`        | Retrieves all customer-managed policies from AWS.                                                   | `python app/cli.py --action get-policies`                                                               |
+| `get-roles`           | Retrieves all IAM roles from AWS.                                                                    | `python app/cli.py --action get-roles`                                                                  |
+| `delete-policies`     | Deletes policies associated with the specified role type.                                           | `python app/cli.py --action delete-policies`                                                             |
+| `delete-role`         | Deletes the specified IAM role from AWS.                                                            | `python app/cli.py --action delete-role`                                                                 |
+| `delete`              | Deletes both IAM policies and the role for the specified role type.                                 | `python app/cli.py --action delete`                                                                      |
+| `create`              | Combines `create-statements`, `create-policies`, and `create-role` into a single workflow.          | `python app/cli.py --action create`                                                                      |
 
-3. **Create Specific Role**:
-   ```bash
-   python ./cli.py --action create --role-type <ROLE_TYPE>
-   ```
-4. **List Existing Roles and Policies**:
-   ```bash
-   python ./cli.py --action get-roles
-   python ./cli.py --action get-policies
-   ```
-5. **Attach Policies**
-   ```bash
-   python ./cli.py --action attach-policies
-   python ./cli.py --action attach-policies --role-type <ROLE_TYPE>
-   ```
+### Notes
+- The `--role-type` argument is **required** for `init-role` and `create-pre-template`
+- The `--role-name` argument is also required for `init-role`.
+- For all other actions, if `--role-type` is **not provided**, the CLI will run the action for **all role types** defined in `roles.json`.
+- Templates and policies are processed from the `templates/pre` and `templates/post` directories respectively.
 
-### Delete Roles and Policies
-1. **Delete All Resources**:
-   ```bash
-   python ./cli.py --action delete
-   ```
-   This detaches policies and deletes the roles.
+### Recommendation
+Use the following commands to make sure the statements look correct before using commands that change AWS:
+- `init-role`
+- `create-pre-template`
+- `create-statements`
 
-2. **Delete Specific Roles**:
-   ```bash
-   python ./cli.py --action delete-role --role-type <ROLE_TYPE>
-   ```
 ---
 
 ## Environment Variables
@@ -179,6 +170,8 @@ These variables configure your AWS account and IAM role settings:
 | `role_path`                    | Path prefix for roles (e.g., `/vendor/`). Optional but recommended for accounts with many roles. |
 | `vendor_trust_principal_arn`   | ARN of the cross-account IAM entity that will assume the roles (provided by vendor).         |
 | `project_prefix`               | Project namespace in resource names. Used to enforce on roles and policies.                  |
+| `vendor_tag_key`               | Tag name to apply to iam roles. Can be injected into policies as well                        |
+| `vendor_tag_value`             | Tag value to apply to iam roles. Can be injected into policies as well                       |
 | `tf_backend_s3_bucket`         | Limit roles to specific S3 bucket (for TF backend)                                          |
 | `tf_backend_dynamodb_table_name`| Limit roles to specific dynamo table (for TF backend)                                       |
 | `CONSOLE_ACCESS_ROLE_NAME`     | Name of the role for console access.                                                         |

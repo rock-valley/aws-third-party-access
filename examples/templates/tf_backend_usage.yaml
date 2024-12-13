@@ -1,0 +1,56 @@
+mode: crud
+name: 'Permissions to use a specific s3 bucket and dynamo table'
+# Specify resource ARNs
+read:
+- "arn:aws:dynamodb:*:{{ aws_account }}:table/{{ tf_backend_dynamodb_table_name }}"
+- "arn:aws:s3:::{{ tf_backend_s3_bucket }}"
+- "arn:aws:s3:::{{ tf_backend_s3_bucket }}/*"
+write:
+- "arn:aws:dynamodb:*:{{ aws_account }}:table/{{ tf_backend_dynamodb_table_name }}"
+- "arn:aws:s3:::{{ tf_backend_s3_bucket }}"
+- "arn:aws:s3:::{{ tf_backend_s3_bucket }}/*"
+list:
+- "arn:aws:dynamodb:*:{{ aws_account }}:table/{{ tf_backend_dynamodb_table_name }}"
+- "arn:aws:s3:::{{ tf_backend_s3_bucket }}"
+- "arn:aws:s3:::{{ tf_backend_s3_bucket }}/*"
+tagging:
+- "arn:aws:dynamodb:*:{{ aws_account }}:table/{{ tf_backend_dynamodb_table_name }}"
+- "arn:aws:s3:::{{ tf_backend_s3_bucket }}"
+- "arn:aws:s3:::{{ tf_backend_s3_bucket }}/*"
+permissions-management:
+- ''
+# Actions that do not support resource constraints
+wildcard-only:
+  single-actions: # standalone actions
+  - ''
+  # Service-wide - like 's3' or 'ec2'
+  service-read:
+  - ''
+  service-write:
+  - ''
+  service-list:
+  - ''
+  service-tagging:
+  - ''
+  service-permissions-management:
+  - ''
+# Skip resource constraint requirements by listing actions here.
+skip-resource-constraints:
+  - ''
+# Exclude actions from the output by specifying them here. Accepts wildcards, like kms:Delete*
+exclude-actions:
+  - 'organizations:*'
+  - "dynamodb:DeleteTable"
+  - "dynamodb:DeleteTableReplica"
+  - "dynamodb:CreateTable"
+  - "s3:CreateBucket"
+  - "s3:DeleteBucket"
+  - "s3:DeleteBucketWebsite"
+# If this policy needs to include an AssumeRole action
+sts:
+  assume-role:
+    - ''
+  assume-role-with-saml:
+    - ''
+  assume-role-with-web-identity:
+    - ''
