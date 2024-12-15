@@ -26,4 +26,5 @@ MANIFEST
 app/templates/post/**/*.json
 app/templates/pre/**/*.yml
 app/templates/pre/**/*.yaml
+app/conditions.csv
 app/roles.json

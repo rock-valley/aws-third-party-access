@@ -20,38 +20,149 @@ TAGS = [{"Key": os.getenv("vendor_tag_key"), "Value": os.getenv("vendor_tag_valu
 role_path = os.getenv("role_path", "/")
 
 roles_file_path = f"{current_dir}/roles.json"
-if not os.path.exists(roles_file_path):
-    with open(roles_file_path, "w") as file:
-        json.dump({}, file)
-    print(f"Created empty roles.json file at {roles_file_path}")
 
-with open(roles_file_path, "r") as roles_file:
-    role_names = json.load(roles_file)
-
-
+role_names = {}
 if not role_path.startswith("/"):
     role_path = "/" + role_path
 if not role_path.endswith("/"):
     role_path = role_path + "/"
 
-for d in ["pre", "post"]:
-    folder = os.path.join(TEMPLATE_DIR, d)
-    subfolder_names = {
-        name for name in os.listdir(folder) if os.path.isdir(os.path.join(folder, name))
-    }
-    for role_name in role_names:
-        role_folder = os.path.join(folder, role_name)
-        if role_name not in subfolder_names:
-            os.makedirs(role_folder, exist_ok=True)
-            print(f"Created missing folder: {role_folder}")
 
-    subfolder_names = {
-        name for name in os.listdir(folder) if os.path.isdir(os.path.join(folder, name))
-    }
-    if subfolder_names != set(role_names):
-        raise FileNotFoundError(
-            f"Subfolder mismatch in '{folder}'. Expected: {set(role_names)}, Found: {subfolder_names}"
+def check_roles_file():
+    global roles_file_path
+    global role_names
+    if not os.path.exists(roles_file_path):
+        args = argparse.Namespace(template_name="roles.json")
+        copy_example("", args)
+        print(f"Copied example roles.json file to app/")
+
+    with open(roles_file_path, "r") as roles_file:
+        role_names = json.load(roles_file)
+    for d in ["pre", "post"]:
+        folder = os.path.join(TEMPLATE_DIR, d)
+        os.makedirs(folder, exist_ok=True)
+        subfolder_names = {
+            name
+            for name in os.listdir(folder)
+            if os.path.isdir(os.path.join(folder, name))
+        }
+        for role_name in role_names:
+            role_folder = os.path.join(folder, role_name)
+            if role_name not in subfolder_names:
+                os.makedirs(role_folder, exist_ok=True)
+                print(f"Created missing folder: {role_folder}")
+
+        subfolder_names = {
+            name
+            for name in os.listdir(folder)
+            if os.path.isdir(os.path.join(folder, name))
+        }
+        if subfolder_names != set(role_names):
+            raise FileNotFoundError(
+                f"Subfolder mismatch in '{folder}'. Expected: {set(role_names)}, Found: {subfolder_names}"
+            )
+
+
+def setup_defaults():
+    keys = role_names.keys()
+    if "console_access" not in keys or "api_access" not in keys:
+        print(f"Role names: {list(keys)} different than default names. Skipping setup")
+        return
+    defaults = [
+        {
+            "role_type": "api_access",
+            "template_name": "trust_policy_with_external_id.json",
+            "destination_name": "trust_policy.json",
+        },
+        {"role_type": "console_access", "template_name": "trust_policy.json"},
+        {
+            "role_type": "api_access",
+            "template_name": "tf-backend-admin.yaml",
+        },
+        {
+            "role_type": "console_access",
+            "template_name": "tf-backend-usage.yaml",
+        },
+        {
+            "role_type": "api_access",
+            "template_name": "ssm-secrets-write.yaml",
+        },
+        {
+            "role_type": "console_access",
+            "template_name": "ssm-secrets-read.yaml",
+        },
+        {
+            "role_type": "api_access",
+            "template_name": "log-admin.yaml",
+        },
+        {
+            "role_type": "console_access",
+            "template_name": "log-read.yaml",
+        },
+    ]
+
+    for default in defaults:
+        try:
+            args = argparse.Namespace(
+                template_name=default["template_name"],
+                destination_name=default.get("destination_name"),
+            )
+            copy_example(default["role_type"], args)
+        except ValueError as e:
+            print(
+                f"Error for {default['role_type']} with {default['template_name']}: {e}"
+            )
+
+
+def copy_example(role_type, args):
+    """
+    Copies an example template file to the appropriate role_type directory if conditions are met.
+
+    Args:
+        role_type (str): The role type, used to locate the destination folder.
+        args (Namespace): Arguments object with a `template_name` attribute.
+
+    Raises:
+        ValueError: If any of the checks fail.
+    """
+    if not hasattr(args, "template_name") or not args.template_name:
+        raise ValueError("`template_name` is not defined in the provided arguments.")
+    if not os.path.splitext(args.template_name)[1]:
+        raise ValueError(
+            "`template_name` must include a file extension (e.g., .yaml, .json)."
         )
+
+    template_extension = os.path.splitext(args.template_name)[1].lower()
+
+    if template_extension == ".json":
+        role_type_dir = os.path.join(current_dir, "templates/post", role_type)
+        if args.template_name == "roles.json":
+            role_type_dir = current_dir
+    elif template_extension in [".yml", ".yaml"]:
+        role_type_dir = os.path.join(current_dir, "templates/pre", role_type)
+    else:
+        raise ValueError(
+            f"Unsupported template extension '{template_extension}'. Only .json, .yml, or .yaml are allowed."
+        )
+
+    source_file = os.path.join(f"{root_dir}/examples", args.template_name)
+    if not os.path.exists(role_type_dir):
+        raise ValueError(f"The folder './templates/pre/{role_type}' does not exist.")
+
+    if not os.path.exists(source_file):
+        raise ValueError(
+            f"Template file '{args.template_name}' does not exist in 'examples/'."
+        )
+    if not hasattr(args, "destination_name") or not args.destination_name:
+        dest_name = os.path.basename(source_file)
+    else:
+        dest_name = args.destination_name
+    destination_file = os.path.join(role_type_dir, dest_name)
+    if os.path.exists(destination_file):
+        print(f"{args.template_name} already exists in {role_type_dir}. Skipping.")
+    else:
+        shutil.copy(source_file, destination_file)
+        print(f"File '{source_file}' successfully copied to '{destination_file}'.")
 
 
 def initialize_role(role_type, args):
@@ -329,6 +440,17 @@ def delete_role(role_name):
 
 
 def create_statements_action(role_type, args):
+    output_dir = os.path.join(OUTPUT_DIR, role_type)
+    if os.path.exists(output_dir):
+        for filename in os.listdir(output_dir):
+            file_path = os.path.join(output_dir, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
     process_pre_templates(role_type, args)
     templates = load_templates(role_type)
     processed_policies = process_templates(templates)
@@ -504,6 +626,8 @@ def main():
         "--action",
         choices=[
             "create",
+            "copy-example",
+            "setup-defaults",
             "create-pre-template",
             "process-pre-template",
             "create-statements",
@@ -523,7 +647,7 @@ def main():
     parser.add_argument(
         "--template-name",
         required=False,
-        help="Name of template to create",
+        help="Name of template to create or to copy from examples/templates",
     )
     parser.add_argument(
         "--role-name",
@@ -532,8 +656,9 @@ def main():
     )
 
     args = parser.parse_args()
+    setup_actions = ["init-role", "copy_example"]
     if (
-        args.action != "init-role"
+        args.action != setup_actions
         and args.role_type
         and args.role_type not in role_types
     ):
@@ -548,6 +673,7 @@ def main():
         else None
     )
     role_type_actions = {
+        "copy-example": copy_example,
         "create-pre-template": create_policy_sentry_template,
         "process-pre-template": process_pre_templates,
         "init-role": initialize_role,
@@ -582,7 +708,10 @@ def main():
     elif args.action == "delete-role":
         for access_type in current_role_types:
             delete_role(get_role_name_by_access_type(access_type))
+    elif args.action == "setup-defaults":
+        setup_defaults()
 
 
+check_roles_file()
 if __name__ == "__main__":
     main()

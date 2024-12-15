@@ -1,7 +1,6 @@
 # AWS Third-Party Access
 Scripts for managing AWS access for vendors, contractors, and other unsavory characters.
 
-
 This library automates the creation and management of **cross-account roles** in AWS to securely grant vendors, contractors, or other third parties limited access to your account. The library creates roles for both **console access** and **API access**, ensuring security and compliance with AWS best practices.
 
 ## Features
@@ -22,18 +21,17 @@ AWS requires separate roles for:
 This wouldn't be required if the console supported `external-id`.
 
 ### How can I add more role types?
-- create a role type (**e.g.,** `logger`); the value doesn't matter as long as it's unique in this repo.
-- add to the `role_names` dictionary at the top of `app/cli.py`
-- create a subfolder in `./templates` named after the role type
+- run `init-role` action. See Usage table below.
 
 ---
 
 ## Quick Start
 
 ### Prerequisites
+
+Either install `docker` or:
 1. **Python**: Install Python 3.8 or later.
 2. **AWS CLI**: Ensure the AWS CLI is configured for your account.
-3. **Environment Variables**: Create a `.env` file to store required configuration values.
 
 ---
 
@@ -48,6 +46,11 @@ cd aws-third-party-access
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+```
+#### ...Or with Docker
+```bash
+make build
+make run # to use
 ```
 
 ### 3. Setup
@@ -79,6 +82,14 @@ Update the `.env` file with your target account and cross-account details (see [
    - Inside each `templates/post/<ROLE_TYPE>` folder, add a `trust_policy.json` file.
    - Refer to the `./examples` directory for example trust policy files.
 
+**Note:** Use cli to setup the role by running: `python app/cli.py --action init-role --role-type <ROLE_TYPE> --role-name <ROLE_NAME>`
+
+#### Use Repo Defaults 
+To start with some of the templates in `./examples` run:
+```bash
+python app/cli.py --action setup-defaults
+```
+This will add a few policy templates for both the api and console roles.
 ### 4. Define Policy Templates
 
 ###$ Directory Structure
@@ -91,7 +102,6 @@ Within both `pre` and `post` subfolders:
 - There should be a subfolder for each role you are creating.
 - Every role folder in the `templates/post` folder must include a `trust_policy.json` file to define the role's trust policy.
 
-**Note:** Use cli to setup the role by running: `python app/cli.py --action init-role --role-type <ROLE_TYPE> --role-name <ROLE_NAME>`
 
 #### Workflow for Policy Statements
 1. **Create a CRUD Template**:
@@ -144,6 +154,8 @@ The CLI tool provides several actions to manage IAM roles and policies. Below is
 | `delete-role`         | Deletes the specified IAM role from AWS.                                                            | `python app/cli.py --action delete-role`                                                                 |
 | `delete`              | Deletes both IAM policies and the role for the specified role type.                                 | `python app/cli.py --action delete`                                                                      |
 | `create`              | Combines `create-statements`, `create-policies`, and `create-role` into a single workflow.          | `python app/cli.py --action create`                                                                      |
+| `copy-example`        | Copy a template from `./examples`. **Requires `--role-type` and `--template-name`**                 | `python app/cli.py --action copy-example`                                                                      |
+| `setup-defaults`      | Adds default templates from `./examples` folder                                                     | `python app/cli.py --action setup-defaults`                                                                      |
 
 ### Notes
 - The `--role-type` argument is **required** for `init-role` and `create-pre-template`
@@ -174,8 +186,6 @@ These variables configure your AWS account and IAM role settings:
 | `vendor_tag_value`             | Tag value to apply to iam roles. Can be injected into policies as well                       |
 | `tf_backend_s3_bucket`         | Limit roles to specific S3 bucket (for TF backend)                                          |
 | `tf_backend_dynamodb_table_name`| Limit roles to specific dynamo table (for TF backend)                                       |
-| `CONSOLE_ACCESS_ROLE_NAME`     | Name of the role for console access.                                                         |
-| `API_ACCESS_ROLE_NAME`         | Name of the role for API access.                                                             |
 | `aws_external_id`              | External ID for cross-account role assumptions (provided by vendor).                        |
 
 
