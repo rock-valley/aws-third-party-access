@@ -158,11 +158,8 @@ def copy_example(role_type, args):
     else:
         dest_name = args.destination_name
     destination_file = os.path.join(role_type_dir, dest_name)
-    if os.path.exists(destination_file):
-        print(f"{args.template_name} already exists in {role_type_dir}. Skipping.")
-    else:
-        shutil.copy(source_file, destination_file)
-        print(f"File '{source_file}' successfully copied to '{destination_file}'.")
+    shutil.copy(source_file, destination_file)
+    print(f"File '{source_file}' successfully copied to '{destination_file}'.")
 
 
 def initialize_role(role_type, args):

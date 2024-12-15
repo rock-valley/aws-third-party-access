@@ -1,0 +1,11 @@
+mode: crud
+name: ''
+# Specify resource ARNs
+read:
+- "arn:aws:iam::{{ aws_account}}:policy/{{project_prefix}}-*"
+- "arn:aws:iam::{{ aws_account }}:role/{{project_prefix}}-*"
+list:
+- "arn:aws:iam::{{ aws_account}}:policy/{{project_prefix}}-*"
+- "arn:aws:iam::{{ aws_account }}:role/{{project_prefix}}-*"
+exclude-actions:
+  - 'organizations:*'
