@@ -1,26 +1,26 @@
 mode: crud
 name: 'Permissions to use a specific s3 bucket, dynamo table, and cloudformation stack'
 read:
-- "arn:aws:dynamodb:*:{{ aws_account }}:table/{{ tf_backend_dynamodb_table_name }}"
-- "arn:aws:s3:::{{ tf_backend_s3_bucket }}"
-- "arn:aws:s3:::{{ tf_backend_s3_bucket }}/*"
-- "arn:aws:cloudformation:{{AWS_REGION}}::stack/{project_prefix}-*"
+- "arn:aws:dynamodb:*:${aws_account}:table/{$tf_backend_dynamodb_table_name}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}/*"
+- "arn:aws:cloudformation:${AWS_REGION}::stack/${project_prefix}-*"
 write:
-- "arn:aws:dynamodb:*:{{ aws_account }}:table/{{ tf_backend_dynamodb_table_name }}"
-- "arn:aws:s3:::{{ tf_backend_s3_bucket }}"
-- "arn:aws:s3:::{{ tf_backend_s3_bucket }}/*"
-- "arn:aws:cloudformation:{{AWS_REGION}}::stack/{project_prefix}-*"
+- "arn:aws:dynamodb:*:${aws_account}:table/{$tf_backend_dynamodb_table_name}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}/*"
+- "arn:aws:cloudformation:${AWS_REGION}::stack/${project_prefix}-*"
 list:
-- "arn:aws:dynamodb:*:{{ aws_account }}:table/{{ tf_backend_dynamodb_table_name }}"
-- "arn:aws:s3:::{{ tf_backend_s3_bucket }}"
-- "arn:aws:s3:::{{ tf_backend_s3_bucket }}/*"
-- "arn:aws:cloudformation:{{AWS_REGION}}::stack/{project_prefix}-*"
+- "arn:aws:dynamodb:*:${aws_account}:table/{$tf_backend_dynamodb_table_name}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}/*"
+- "arn:aws:cloudformation:${AWS_REGION}::stack/${project_prefix}-*"
 
 tagging:
-- "arn:aws:dynamodb:*:{{ aws_account }}:table/{{ tf_backend_dynamodb_table_name }}"
-- "arn:aws:s3:::{{ tf_backend_s3_bucket }}"
-- "arn:aws:s3:::{{ tf_backend_s3_bucket }}/*"
-- "arn:aws:cloudformation:{{AWS_REGION}}::stack/{project_prefix}-*"
+- "arn:aws:dynamodb:*:${aws_account}:table/{$tf_backend_dynamodb_table_name}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}/*"
+- "arn:aws:cloudformation:${AWS_REGION}::stack/${project_prefix}-*"
 
 permissions-management:
 - ''

@@ -1,11 +1,15 @@
 mode: crud
-name: ''
+name: 'Permissions to use a specific s3 bucket and dynamo table'
 read:
-- 'arn:aws:secretsmanager:${AWS_REGION}:${aws_account}:secret:${project_prefix}-*'
-- "arn:aws:ssm:${AWS_REGION}:${aws_account}:parameter/${project_prefix}/*"
+- "arn:aws:dynamodb:*:${aws_account}:table/{$tf_backend_dynamodb_table_name}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}/*"
+- "arn:aws:cloudformation:${AWS_REGION}::stack/${project_prefix}-*"
 list:
-- 'arn:aws:secretsmanager:${AWS_REGION}:${aws_account}:secret:${project_prefix}-*'
-- "arn:aws:ssm:${AWS_REGION}:${aws_account}:parameter/${project_prefix}/*"
+- "arn:aws:dynamodb:*:${aws_account}:table/{$tf_backend_dynamodb_table_name}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}"
+- "arn:aws:s3:::${tf_backend_s3_bucket}/*"
+- "arn:aws:cloudformation:${AWS_REGION}::stack/${project_prefix}-*"
 permissions-management:
 - ''
 # Actions that do not support resource constraints
@@ -14,7 +18,7 @@ wildcard-only:
   - ''
   # Service-wide - like 's3' or 'ec2'
   service-read:
-  - 'ssm'
+  - ''
   service-write:
   - ''
   service-list:
@@ -25,11 +29,10 @@ wildcard-only:
   - ''
 # Skip resource constraint requirements by listing actions here.
 skip-resource-constraints:
-  - 'ssm:DescribeParameters'
+  - ''
 # Exclude actions from the output by specifying them here. Accepts wildcards, like kms:Delete*
 exclude-actions:
-- ''
-# If this policy needs to include an AssumeRole action
+  - 'organizations:*'
 sts:
   assume-role:
     - ''

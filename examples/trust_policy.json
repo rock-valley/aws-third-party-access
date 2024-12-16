@@ -4,7 +4,7 @@
     {
       "Effect": "Allow",
       "Principal": {
-        "AWS": "{{vendor_trust_principal_arn}}"
+        "AWS": "${vendor_trust_principal_arn}"
       },
       "Action": "sts:AssumeRole"
     }

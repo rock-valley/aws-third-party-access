@@ -77,11 +77,11 @@ def setup_defaults():
         {"role_type": "console_access", "template_name": "trust_policy.json"},
         {
             "role_type": "api_access",
-            "template_name": "tf-backend-admin.yaml",
+            "template_name": "tf-backend-write.yaml",
         },
         {
             "role_type": "console_access",
-            "template_name": "tf-backend-usage.yaml",
+            "template_name": "tf-backend-read.yaml",
         },
         {
             "role_type": "api_access",
@@ -93,11 +93,11 @@ def setup_defaults():
         },
         {
             "role_type": "api_access",
-            "template_name": "log-admin.yaml",
+            "template_name": "log-service-write.yaml",
         },
         {
             "role_type": "console_access",
-            "template_name": "log-read.yaml",
+            "template_name": "log-service-read.yaml",
         },
     ]
 
@@ -225,7 +225,11 @@ def load_templates(role_type):
 
 def process_templates(templates):
     """Render templates using Jinja2 with environment variables."""
-    env = Environment(undefined=StrictUndefined)
+    env = Environment(
+        undefined=StrictUndefined,
+        variable_start_string="${",
+        variable_end_string="}",
+    )
     processed_policies = {}
     for name, policy_content in templates.items():
         try:

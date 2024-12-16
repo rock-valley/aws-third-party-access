@@ -101,6 +101,10 @@ The `templates` directory has two main subfolders:
 Within both `pre` and `post` subfolders:
 - There should be a subfolder for each role you are creating.
 - Every role folder in the `templates/post` folder must include a `trust_policy.json` file to define the role's trust policy.
+#### Template Format
+
+In templates, Use the following format for string interpolation:
+`arn:${Partition}:ec2:${Region}:${Account}:elastic-ip/${AllocationId}`
 
 
 #### Workflow for Policy Statements
