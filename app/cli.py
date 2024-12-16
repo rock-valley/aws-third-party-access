@@ -182,7 +182,7 @@ def initialize_role(role_type, args):
 
     if not os.path.exists(trust_policy_path):
         with open(trust_policy_path, "w") as file:
-            json.dump({}, file)  # Empty JSON object
+            json.dump({}, file)
         print(f"Created empty trust_policy.json file at {trust_policy_path}.")
 
 
@@ -271,7 +271,7 @@ def save_policy(role_type, policy_name, policy_data):
     """Save the policy to the output directory for a specific role."""
     role_output_dir = os.path.join(OUTPUT_DIR, role_type)
     os.makedirs(role_output_dir, exist_ok=True)
-    output_path = os.path.join(role_output_dir, f"{role_type}-{policy_name}")
+    output_path = os.path.join(role_output_dir, policy_name)
     with open(output_path, "w") as file:
         json.dump(policy_data, file, indent=4)
     print(f"Policy saved to {output_path}")
@@ -561,14 +561,16 @@ def attach_policies_action(role_type, args):
         print(f"Failed to fetch attached policies for role {role_name}: {e}")
         return
 
-    role_template_dir = os.path.join(TEMPLATE_DIR, "post", role_type)
-    if not os.path.exists(role_template_dir):
-        print(f"No policy templates found for role type {role_type}.")
+    output_path = os.path.join(OUTPUT_DIR, role_type)
+    if not os.path.exists(output_path):
+        print(
+            f"No policy templates found in Output directory for role type {role_type}."
+        )
         return
 
-    for file_name in os.listdir(role_template_dir):
+    for file_name in os.listdir(output_path):
         if file_name.endswith(".json") and file_name != "trust_policy.json":
-            file_path = os.path.join(role_template_dir, file_name)
+            file_path = os.path.join(output_path, file_name)
 
             with open(file_path, "r", encoding="utf-8") as file:
                 policy_data = json.load(file)
