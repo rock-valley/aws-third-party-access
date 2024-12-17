@@ -670,7 +670,7 @@ def main():
     args = parser.parse_args()
     setup_actions = ["init-role", "copy_example"]
     if (
-        args.action != setup_actions
+        args.action not in setup_actions
         and args.role_type
         and args.role_type not in role_types
     ):

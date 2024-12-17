@@ -1,7 +1,7 @@
 # AWS Third-Party Access
 Scripts for managing AWS access for vendors, contractors, and other unsavory characters.
 
-This library automates the creation and management of **cross-account roles** in AWS to securely grant vendors, contractors, or other third parties limited access to your account. The library creates roles for both **console access** and **API access**, ensuring security and compliance with AWS best practices.
+This library automates the creation and management of **cross-account roles** in AWS to securely grant vendors, contractors, or other third parties limited access to your account. The library creates roles for both **console access** and **API access**, ensuring security and compliance with AWS best practices. In order to ensure policies follow the principle of least privilege, this library makes use of the amazing project, [Policy Sentry](https://github.com/salesforce/policy_sentry).
 
 ## Features
 - **Role Management**: Create, attach policies, and delete roles with ease.
@@ -22,7 +22,7 @@ This wouldn't be required if the console supported `external-id`.
 
 ### How can I add more role types?
 - run `init-role` action. See Usage table below.
-
+- then update the trust policy defined at `app/templates/post/<ROLE_TYPE>/trust_policy.json`
 ---
 
 ## Quick Start
@@ -92,7 +92,7 @@ python app/cli.py --action setup-defaults
 This will add a few policy templates for both the api and console roles.
 ### 4. Define Policy Templates
 
-###$ Directory Structure
+#### Directory Structure
 The `templates` directory has two main subfolders:
 
 - **`pre`**: Contains YAML files that will be preprocessed by [policy_sentry](https://github.com/salesforce/policy_sentry). These YAML files define CRUD templates for IAM policies.
@@ -146,7 +146,7 @@ The CLI tool provides several actions to manage IAM roles and policies. Below is
 | **Action**            | **Description**                                                                                      | **Example**                                                                                           |
 |------------------------|------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
 | `init-role`           | Initializes a new role by adding it to `app/roles.json`, creating required subfolders, and a trust policy file. **Requires `--role-type` and `--role-name`.** | `python app/cli.py --action init-role --role-name MyNewRole --role-type my_new_role_type`                |
-| `create-pre-template` | Creates a `policy_sentry` CRUD template in the `templates/pre/<ROLE_TYPE>` directory. Requires `--template-name`. | `python app/cli.py --action create-pre-template --role-type my_role_type --template-name my_template`    |
+| `create-pre-template` | Creates a `policy_sentry` CRUD template in the `templates/pre/<ROLE_TYPE>` directory. Requires `--template-name` (Optional: add aws services arns to the template with `--services s3,ec2,etc`). | `python app/cli.py --action create-pre-template --role-type my_role_type --template-name my_template`    |
 | `process-pre-template`| Processes YAML templates from `templates/pre/<ROLE_TYPE>` to generate JSON files in `templates/post/<ROLE_TYPE>`. | `python app/cli.py --action process-pre-template --role-type my_role_type`                               |
 | `create-statements`   | Combines templates and processes them into JSON statements in the `output` directory.                 | `python app/cli.py --action create-statements`                                                           |
 | `create-policies`     | Creates IAM policies in AWS for the specified role type using generated templates.                   | `python app/cli.py --action create-policies`                                                             |
@@ -177,19 +177,20 @@ Use the following commands to make sure the statements look correct before using
 
 ## Environment Variables
 
-These variables configure your AWS account and IAM role settings:
+The template examples expects these variables. Update as needed for your use case:
 
 | Variable                       | Description                                                                                   |
 |--------------------------------|-----------------------------------------------------------------------------------------------|
 | `AWS_REGION`                   | AWS region of the target account.                                                            |
 | `AWS_PROFILE`                  | AWS CLI profile to use for target account operations.                                        |
+| `aws_account`                  | AWS Account number for target account                                                        |
 | `role_path`                    | Path prefix for roles (e.g., `/vendor/`). Optional but recommended for accounts with many roles. |
-| `vendor_trust_principal_arn`   | ARN of the cross-account IAM entity that will assume the roles (provided by vendor).         |
 | `project_prefix`               | Project namespace in resource names. Used to enforce on roles and policies.                  |
 | `vendor_tag_key`               | Tag name to apply to iam roles. Can be injected into policies as well                        |
 | `vendor_tag_value`             | Tag value to apply to iam roles. Can be injected into policies as well                       |
 | `tf_backend_s3_bucket`         | Limit roles to specific S3 bucket (for TF backend)                                          |
 | `tf_backend_dynamodb_table_name`| Limit roles to specific dynamo table (for TF backend)                                       |
+| `vendor_trust_principal_arn`   | ARN of the cross-account IAM entity that will assume the roles (provided by vendor).         |
 | `aws_external_id`              | External ID for cross-account role assumptions (provided by vendor).                        |
 
 
