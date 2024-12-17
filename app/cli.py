@@ -192,7 +192,7 @@ def create_policy_sentry_template(role_type, args):
     if not role_type:
         raise AttributeError("role_type arg is required")
     directory = os.path.join(TEMPLATE_DIR, "pre", role_type)
-    create_ps_template(directory, args.template_name)
+    create_ps_template(directory, args.template_name, services=args.services)
 
 
 def process_pre_templates(role_type, args):
@@ -278,14 +278,18 @@ def save_policy(role_type, policy_name, policy_data):
 
 
 def create_policy(policy_data, file_name):
-    """Create an IAM policy in AWS with a name derived from the filename."""
+    base_name = os.path.splitext(file_name)[0]
+
+    f"""Create an IAM policy for {base_name}"""
     policy_name = get_resource_name_from_filename(file_name)
 
     print(f"Creating policy: {policy_name}")
     try:
+        compressed_policy_data = json.dumps(policy_data, separators=(",", ":"))
+        print(f"Characters: {len(compressed_policy_data)}")
         response = iam_client.create_policy(
             PolicyName=policy_name,
-            PolicyDocument=json.dumps(policy_data),
+            PolicyDocument=compressed_policy_data,
             Tags=TAGS,
         )
         print(f"Policy {policy_name} created successfully.")
@@ -656,6 +660,11 @@ def main():
         "--role-name",
         required=False,
         help="Name of role to create. Used in init-role",
+    )
+    parser.add_argument(
+        "--services",
+        required=False,
+        help="Comma-delimited list of aws services (eg s3,ec2,...) to populate arns in policy_sentry template. Used by create-pre-template",
     )
 
     args = parser.parse_args()
